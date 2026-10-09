@@ -1,0 +1,5 @@
+## Development Plan for the SER
+
+---> The objective is to develop a real time SER which automatically detects which emotion the speaker feels.
+
+## How is it going to be done:
