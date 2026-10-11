@@ -3,3 +3,20 @@
 ---> The objective is to develop a real time SER which automatically detects which emotion the speaker feels.
 
 ## How is it going to be done:
+
+ser/
+├── README.md
+├── requirements.txt
+├── config.yaml
+├── src/
+│   ├── data.py        # Metadaten, Split, Dataset
+│   ├── baseline.py    # eGeMAPS + SVM
+│   ├── model.py       # WavLM + Kopf
+│   ├── train.py
+│   ├── evaluate.py
+│   └── live.py        # Inferenz + Mikrofon (infer.py darin)
+├── app.py             # Gradio-Demo
+├── notebooks/         # EDA, Colab-Training
+├── checkpoints/       # gitignored
+├── results/           # Plots + Metriken (committen, fürs Poster)
+└── data/              # gitignored

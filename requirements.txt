@@ -1,0 +1,16 @@
+torch
+torchaudio
+transformers
+librosa
+soundfile
+numpy
+pandas
+scikit-learn
+pyyaml
+matplotlib
+seaborn
+opensmile
+sounddevice
+gradio
+kaggle
+tqdm
