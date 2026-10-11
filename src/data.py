@@ -13,16 +13,20 @@ TESS hat Namen wie OAF_back_angry.wav: Sprecherin, Wort, Emotion. ps steht für 
 import pandas as pd
 from pathlib import Path
 
+
+ravdess_path = r"C:\\Users\\rashi\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\Ravedess dataset"
+tess_path = r"C:\\Users\\rashi\\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\TESS Toronto emotional speech set data"
+
 ravdess_map = {
 
-    "1" : "neutral",
-    "2" : "None",
-    "3" : "happy",
-    "4" : "sad",
-    "5" : "angry",
-    "6" : "fear",
-    "7" : "disgust",
-    "8" : "surprise"
+    "01" : "neutral",
+    "02" : None,
+    "03" : "happy",
+    "04" : "sad",
+    "05" : "angry",
+    "06" : "fear",
+    "07" : "disgust",
+    "08" : "surprise"
 
 }
 
@@ -52,8 +56,10 @@ def build_metadata(ravdess_dir:str , tess_dir: str) -> pd.DataFrame: # Get the m
         emo = ravdess_map.get(parts[2]) # emotion
         if emo is None:
             continue
-        rows.append(dict(path = str(p), label = label_to_id[emo],
-                         speaker = f"rav_{int(parts[6]):02d})", corpus = "ravdess"))
+        rows.append(dict(path = str(p), 
+                        label = label_to_id[emo],
+                         speaker = f"rav_{int(parts[6]):02d}", 
+                         corpus = "ravdess"))
 
 
     for p in Path(tess_dir).rglob("*.wav"):
@@ -67,3 +73,8 @@ def build_metadata(ravdess_dir:str , tess_dir: str) -> pd.DataFrame: # Get the m
                          corpus = "tess"))
 
     return pd.DataFrame(rows)
+
+
+if __name__ == '__main__':
+    df = build_metadata(ravdess_dir = ravdess_path, tess_dir = tess_path)
+    print(df)
