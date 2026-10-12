@@ -75,6 +75,26 @@ def build_metadata(ravdess_dir:str , tess_dir: str) -> pd.DataFrame: # Get the m
     return pd.DataFrame(rows)
 
 
+def split(df: pd.DataFrame,
+          val_actors: set = {15, 16, 17, 18, 19},
+          test_actors: set = {20, 21, 22, 23, 24}): # split the dataset in such a way that no speaker is in 2 or 3 different sets
+
+    val_id = [f"rav_{a}" for a in val_actors]
+    test_id = [f"rav_{b}" for b in test_actors]
+
+    val = df[df['speaker'].isin(val_id)]
+    test = df[df['speaker'].isin(test_id)]
+
+    train = df[~df["speaker"].isin(set(val_id) | set(test_id))] # |  Union between the 2 sets... ~ inverse
+
+    return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
+
+
 if __name__ == '__main__':
     df = build_metadata(ravdess_dir = ravdess_path, tess_dir = tess_path)
-    print(df)
+    train, val, test = split(df= df)
+    print(
+        "Train size: ", train.shape,
+        "Val size: ", val.shape,
+        "Test size: ", test.shape
+    )
