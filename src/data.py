@@ -12,10 +12,17 @@ TESS hat Namen wie OAF_back_angry.wav: Sprecherin, Wort, Emotion. ps steht für 
 
 import pandas as pd
 from pathlib import Path
-
+import librosa
+import numpy as np
+import torch
+from torch.utils.data import DataLoader
+import random
 
 ravdess_path = r"C:\\Users\\rashi\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\Ravedess dataset"
 tess_path = r"C:\\Users\\rashi\\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\TESS Toronto emotional speech set data"
+
+sample_rate = 16_000 # wavlm hat eine sample rate von 16kHz
+max_len = 4 * sample_rate ## Bsp: 4 Sekunden × 16.000 Samples/Sekunde = 64.000 Samples
 
 ravdess_map = {
 
@@ -90,11 +97,69 @@ def split(df: pd.DataFrame,
     return train.reset_index(drop=True), val.reset_index(drop=True), test.reset_index(drop=True)
 
 
+def augment_data(y: np.ndarray) -> np.ndarray:
+    if random.random() < 0.5:                       # Rauschen
+        y = y + np.random.randn(len(y)) * y.std() * random.uniform(0.002, 0.1)
+    return y
+
+def class_weights(df: pd.DataFrame) -> torch.Tensor:
+    counts = np.bincount(df["label"], minlength=len(labels))
+    w = counts.sum() / (len(labels) * np.maximum(counts, 1))
+    return torch.tensor(w, dtype=torch.float32)
+
+
+class EmotionDataset:
+    
+    
+    def __init__(self, df : pd.DataFrame, augment: bool = False):
+
+        self.df = df
+        self.augment = augment
+
+    def __len__(self):
+        return len(self.df)
+    
+    def __getitem__(self, idx):    ## Bsp: 4 Sekunden × 16.000 Samples/Sekunde = 64.000 Samples
+        row = self.df.iloc[idx]
+        y, _ = librosa.load(
+
+            path = row["path"],
+            sr = sample_rate,
+            mono= True
+        )
+
+        y, _ = librosa.effects.trim(
+            y= y,
+            top_db = 30
+        )
+
+        if self.augment:
+            y = augment_data(y)
+
+        if len(y) > max_len:
+
+            if self.augment:
+                start = random.randint(0, len(y) - max_len)
+
+            else:
+                start = (len(y) - max_len) // 2
+            y = y[start : start + max_len] # Center crop. Only the middle Info is been conserved
+
+        y = np.pad(y, (0, max_len - len(y)))
+        y = (y - y.mean()) / (y.std() + 1e-7)
+
+        return torch.tensor(y, dtype= torch.float32), int(row['label'])
+
+
 if __name__ == '__main__':
     df = build_metadata(ravdess_dir = ravdess_path, tess_dir = tess_path)
     train, val, test = split(df= df)
-    print(
-        "Train size: ", train.shape,
-        "Val size: ", val.shape,
-        "Test size: ", test.shape
-    )
+
+train_ds = EmotionDataset(train, augment=True)
+val_ds   = EmotionDataset(val)       # augment=False
+test_ds  = EmotionDataset(test)
+print("Train_ds: ", train_ds, "test_ds: ", test_ds, "val_ds", val_ds)
+aug_ds = EmotionDataset(train, augment=True)
+a, _ = aug_ds[0] #  Tuple unpacking ... (a - tensor, _ - label)
+diffs = [(a - aug_ds[0][0]).abs().max().item() for _ in range(10)]
+print(diffs)
