@@ -9,7 +9,7 @@ from model import SER
 from pathlib import Path
 from tqdm import tqdm
 
-EPOCHS = 5
+EPOCHS = 15
 PATIENCE = 4                       # so viele Epochen ohne Verbesserung, dann Stopp
 BATCH_SIZE = 8
 CKPT = Path(__file__).resolve().parents[1] / "checkpoints" / "ser_best.pt"
