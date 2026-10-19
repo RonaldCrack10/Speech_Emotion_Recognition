@@ -155,11 +155,11 @@ if __name__ == '__main__':
     df = build_metadata(ravdess_dir = ravdess_path, tess_dir = tess_path)
     train, val, test = split(df= df)
 
-train_ds = EmotionDataset(train, augment=True)
-val_ds   = EmotionDataset(val)       # augment=False
-test_ds  = EmotionDataset(test)
-print("Train_ds: ", train_ds, "test_ds: ", test_ds, "val_ds", val_ds)
-aug_ds = EmotionDataset(train, augment=True)
-a, _ = aug_ds[0] #  Tuple unpacking ... (a - tensor, _ - label)
-diffs = [(a - aug_ds[0][0]).abs().max().item() for _ in range(10)]
-print(diffs)
+    train_ds = EmotionDataset(train, augment=True)
+    val_ds   = EmotionDataset(val)       # augment=False
+    test_ds  = EmotionDataset(test)
+    print("Train_ds: ", train_ds, "test_ds: ", test_ds, "val_ds", val_ds)
+    aug_ds = EmotionDataset(train, augment=True)
+    a, _ = aug_ds[0] #  Tuple unpacking ... (a - tensor, _ - label)
+    diffs = [(a - aug_ds[0][0]).abs().max().item() for _ in range(10)]
+    print(diffs)
