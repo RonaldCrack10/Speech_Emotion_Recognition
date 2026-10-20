@@ -43,6 +43,14 @@ def loader(X, y, shuffle):
     return DataLoader(ds, batch_size=64, shuffle=shuffle)
 
 if __name__ == "__main__":
+
+    Xtr, ytr = load("train")
+    Xva, yva = load("val")
+
+    mean = Xtr.mean(axis=0, keepdims=True)                 # (1, 13, 768)
+    std = Xtr.std(axis=0, keepdims=True) + 1e-6
+    Xtr, Xva = (Xtr - mean) / std, (Xva - mean) / std
+
     train_loader, val_loader = loader(Xtr, ytr, True), loader(Xva, yva, False)
 
     model = WeightedHead().to(device)
