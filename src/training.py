@@ -8,11 +8,25 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from data import class_weights, labels
 from tqdm import tqdm
-from train import evaluate, device
+from sklearn.metrics import f1_score
 
 ROOT = Path(__file__).resolve().parents[1]
 EMB = ROOT / "data" / "processed"
-CKPT = ROOT / "checkpoints" / "ser_cached.pt"
+CKPT = ROOT / "checkpoints" / "ser.pt"
+device = "cuda" if torch.cuda.is_available() else "cpu"
+
+@torch.no_grad()
+def evaluate(model, loader, criterion):
+    model.eval()
+    total_loss, preds, targets = 0.0, [], []
+    for x, y in tqdm(loader, desc= "train", leave= False):
+        x, y = x.to(device), y.to(device)
+        logits = model(x)
+        total_loss += criterion(logits, y).item() * len(y)
+        preds += logits.argmax(dim=1).tolist()
+        targets += y.tolist()
+    f1 = f1_score(targets, preds, average="macro")
+    return total_loss / len(targets), f1
 
 def load(name):
     d = np.load(EMB / f"emb_{name}.npz")
