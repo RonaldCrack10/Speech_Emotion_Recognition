@@ -7,6 +7,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from data import class_weights, labels
+from tqdm import tqdm
 from train import evaluate, device
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,25 +19,28 @@ def load(name):
     return d["X"].astype(np.float32), d["y"]
 
 
-class WeightedHead(nn.Module):
+class SER(nn.Module):
     def __init__(self, n_layers=13, hidden=768, n_classes=7, dropout=0.3):
         super().__init__()
-        self.layer_w = nn.Parameter(torch.zeros(n_layers))
+        self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most
         self.head = nn.Sequential(
-            nn.Linear(hidden, 256), nn.ReLU(),
-            nn.Dropout(dropout), nn.Linear(256, n_classes))
+            nn.Linear(hidden, 256), 
+            nn.ReLU(),
+            nn.Dropout(dropout), 
+            nn.Linear(256, n_classes)
+            )
 
     def forward(self, x):                              # x: (B, 13, 768)
         w = torch.softmax(self.layer_w, dim=0)         # 13 Gewichte, Summe = 1
-        pooled = (x * w[None, :, None]).sum(dim=1)     # (B, 768)
+        pooled = (x * w[None, :, None]).sum(dim=1)     # (B, 768) aus allen Schichten eine einzige machen x1*w1 + x2*w2
         return self.head(pooled)
 
-Xtr, ytr = load("train")
-Xva, yva = load("val")
+X_train, y_train = load("train")
+X_val, y_val = load("val")
 
-mean = Xtr.mean(axis=0, keepdims=True)                 # (1, 13, 768)
-std = Xtr.std(axis=0, keepdims=True) + 1e-6
-Xtr, Xva = (Xtr - mean) / std, (Xva - mean) / std
+mean = X_train.mean(axis=0, keepdims=True)                 # (1, 13, 768)
+std = X_train.std(axis=0, keepdims=True) + 1e-6
+X_train, X_val = (X_train - mean) / std, (X_val - mean) / std
 
 def loader(X, y, shuffle):
     ds = TensorDataset(torch.from_numpy(X), torch.from_numpy(y).long())
@@ -44,18 +48,18 @@ def loader(X, y, shuffle):
 
 if __name__ == "__main__":
 
-    Xtr, ytr = load("train")
-    Xva, yva = load("val")
+    X_train, y_train = load("train")
+    X_val, y_val = load("val")
 
-    mean = Xtr.mean(axis=0, keepdims=True)                 # (1, 13, 768)
-    std = Xtr.std(axis=0, keepdims=True) + 1e-6
-    Xtr, Xva = (Xtr - mean) / std, (Xva - mean) / std
+    mean = X_train.mean(axis=0, keepdims=True)                 # (1, 13, 768)
+    std = X_train.std(axis=0, keepdims=True) + 1e-6
+    X_train, X_val = (X_train - mean) / std, (X_val - mean) / std
 
-    train_loader, val_loader = loader(Xtr, ytr, True), loader(Xva, yva, False)
+    train_loader, val_loader = tqdm(loader(X_train, y_train, True)), tqdm(loader(X_val, y_val, False))
 
-    model = WeightedHead().to(device)
+    model = SER().to(device)
     criterion = nn.CrossEntropyLoss(
-        weight=class_weights(pd.DataFrame({"label": ytr})).to(device))
+        weight=class_weights(pd.DataFrame({"label": y_train})).to(device))
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
 
     best_f1, wait = 0.0, 0
@@ -67,14 +71,14 @@ if __name__ == "__main__":
             criterion(model(x), y).backward()
             optimizer.step()
 
-        va_loss, va_f1 = evaluate(model, val_loader, criterion)
-        print(f"Epoche {epoch:2d} | val loss {va_loss:.3f} | val F1 {va_f1:.3f}")
+        val_loss, val_f1 = evaluate(model, val_loader, criterion)
+        print(f"Epoche {epoch:2d} | val loss {val_loss:.3f} | val F1 {val_f1:.3f}")
 
-        if va_f1 > best_f1:
-            best_f1, wait = va_f1, 0
+        if val_f1 > best_f1:
+            best_f1, wait = val_f1, 0
             CKPT.parent.mkdir(exist_ok=True)
             torch.save({"model": model.state_dict(), "labels": labels,
-                        "mean": mean, "std": std, "val_f1": va_f1}, CKPT)
+                        "mean": mean, "std": std, "val_f1": val_f1}, CKPT)
         else:
             wait += 1
             if wait >= 10:
