@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import (accuracy_score, f1_score, classification_report,
                              confusion_matrix, ConfusionMatrixDisplay)
-from training import SER, CKPT, ROOT, load
+from training import WeightedSER, CKPT, ROOT, load
 
 from data import build_metadata, split, EmotionDataset, ravdess_path, tess_path
 
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     Xte, yte = load("test")
     Xte = (Xte - ckpt["mean"]) / ckpt["std"]
 
-    model = SER()
+    model = WeightedSER()
     model.load_state_dict(ckpt["model"])
     model.eval()
     with torch.no_grad():

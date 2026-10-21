@@ -19,7 +19,7 @@ def load(name):
     return d["X"].astype(np.float32), d["y"]
 
 
-class SER(nn.Module):
+class WeightedSER(nn.Module):
     def __init__(self, n_layers=13, hidden=768, n_classes=7, dropout=0.3):
         super().__init__()
         self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most
@@ -35,12 +35,12 @@ class SER(nn.Module):
         pooled = (x * w[None, :, None]).sum(dim=1)     # (B, 768) aus allen Schichten eine einzige machen x1*w1 + x2*w2
         return self.head(pooled)
 
-X_train, y_train = load("train")
-X_val, y_val = load("val")
+    X_train, y_train = load("train")
+    X_val, y_val = load("val")
 
-mean = X_train.mean(axis=0, keepdims=True)                 # (1, 13, 768)
-std = X_train.std(axis=0, keepdims=True) + 1e-6
-X_train, X_val = (X_train - mean) / std, (X_val - mean) / std
+    mean = X_train.mean(axis=0, keepdims=True)                 # (1, 13, 768)
+    std = X_train.std(axis=0, keepdims=True) + 1e-6
+    X_train, X_val = (X_train - mean) / std, (X_val - mean) / std
 
 def loader(X, y, shuffle):
     ds = TensorDataset(torch.from_numpy(X), torch.from_numpy(y).long())
@@ -55,9 +55,9 @@ if __name__ == "__main__":
     std = X_train.std(axis=0, keepdims=True) + 1e-6
     X_train, X_val = (X_train - mean) / std, (X_val - mean) / std
 
-    train_loader, val_loader = tqdm(loader(X_train, y_train, True)), tqdm(loader(X_val, y_val, False))
+    train_loader, val_loader = loader(X_train, y_train, True), loader(X_val, y_val, False)
 
-    model = SER().to(device)
+    model = WeightedSER().to(device)
     criterion = nn.CrossEntropyLoss(
         weight=class_weights(pd.DataFrame({"label": y_train})).to(device))
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
@@ -65,7 +65,7 @@ if __name__ == "__main__":
     best_f1, wait = 0.0, 0
     for epoch in range(1, 61):
         model.train()
-        for x, y in train_loader:
+        for x, y in tqdm(train_loader):
             x, y = x.to(device), y.to(device)
             optimizer.zero_grad()
             criterion(model(x), y).backward()
