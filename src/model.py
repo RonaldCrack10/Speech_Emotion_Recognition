@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from transformers import WavLMModel
 
-
+# WavLM hat 12 Schichten (Transormer Blöcke) + Eingabe Schicht = 13 und Aus einem 4-Sekunden-Clip erzeugt jede Schicht pro 20-ms-Frame einen Vektor aus 768 Zahlen, insgesamt 199 Vektoren pro Schicht.
 class SER(nn.Module):
     def __init__(self, n_classes=7, name="microsoft/wavlm-base-plus", dropout=0.3):
         super().__init__()
