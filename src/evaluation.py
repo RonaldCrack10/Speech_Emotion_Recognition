@@ -15,7 +15,7 @@ from data import build_metadata, split, EmotionDataset, ravdess_path, tess_path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-CKPT = ROOT / "checkpoints" / "ser_cached.pt"
+CKPT = ROOT / "checkpoints" / "ser.pt"
 RESULTS = ROOT / "results"
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -35,24 +35,24 @@ if __name__ == "__main__":
     ckpt = torch.load(CKPT, map_location="cpu", weights_only=False)
     labels = ckpt["labels"]
 
-    Xte, yte = load("test")
-    Xte = (Xte - ckpt["mean"]) / ckpt["std"]
+    X_test, y_test = load("test")
+    X_test = (X_test - ckpt["mean"]) / ckpt["std"]
 
     model = WeightedSER()
     model.load_state_dict(ckpt["model"])
     model.eval()
     with torch.no_grad():
-        pred = model(torch.from_numpy(Xte)).argmax(dim=1).numpy()
+        pred = model(torch.from_numpy(X_test)).argmax(dim=1).numpy()
 
-    acc = accuracy_score(yte, pred)
-    f1 = f1_score(yte, pred, average="macro")
+    acc = accuracy_score(y_test, pred)
+    f1 = f1_score(y_test, pred, average="macro")
     print(f"Accuracy {acc:.3f} | Macro-F1 {f1:.3f}")
-    print(classification_report(yte, pred, target_names=labels, zero_division=0))
+    print(classification_report(y_test, pred, target_names=labels, zero_division=0))
 
     res = ROOT / "results"
     res.mkdir(exist_ok=True)
     (res / "test_metrics.json").write_text(json.dumps({"accuracy": acc, "macro_f1": f1}))
-    cm = confusion_matrix(yte, pred, labels=list(range(len(labels))))
+    cm = confusion_matrix(y_test, pred, labels=list(range(len(labels))))
     ConfusionMatrixDisplay(cm, display_labels=labels).plot(xticks_rotation=45, cmap="Blues")
     plt.tight_layout()
     plt.savefig(res / "confusion_matrix.png", dpi=150)
