@@ -9,10 +9,10 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from sklearn.metrics import (accuracy_score, f1_score, classification_report,
                              confusion_matrix, ConfusionMatrixDisplay)
-from train_cached import WeightedHead, CKPT, ROOT, load
+from training import SER, CKPT, ROOT, load
 
 from data import build_metadata, split, EmotionDataset, ravdess_path, tess_path
-from model import SER
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CKPT = ROOT / "checkpoints" / "ser_cached.pt"
@@ -28,6 +28,8 @@ def predict(model, loader):
         preds += logits.argmax(dim=1).cpu().tolist()
         targets += y.tolist()
     return np.array(targets), np.array(preds)
+
+
 if __name__ == "__main__":
     
     ckpt = torch.load(CKPT, map_location="cpu", weights_only=False)
@@ -36,7 +38,7 @@ if __name__ == "__main__":
     Xte, yte = load("test")
     Xte = (Xte - ckpt["mean"]) / ckpt["std"]
 
-    model = WeightedHead()
+    model = SER()
     model.load_state_dict(ckpt["model"])
     model.eval()
     with torch.no_grad():
@@ -49,8 +51,8 @@ if __name__ == "__main__":
 
     res = ROOT / "results"
     res.mkdir(exist_ok=True)
-    (res / "test_metrics_cached.json").write_text(json.dumps({"accuracy": acc, "macro_f1": f1}))
+    (res / "test_metrics.json").write_text(json.dumps({"accuracy": acc, "macro_f1": f1}))
     cm = confusion_matrix(yte, pred, labels=list(range(len(labels))))
     ConfusionMatrixDisplay(cm, display_labels=labels).plot(xticks_rotation=45, cmap="Blues")
     plt.tight_layout()
-    plt.savefig(res / "confusion_cached.png", dpi=150)
+    plt.savefig(res / "confusion_matrix.png", dpi=150)
