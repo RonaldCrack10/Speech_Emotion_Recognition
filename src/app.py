@@ -37,7 +37,7 @@ def record_and_classify():            # Knopf-Aufnahme über sounddevice
 
 with gr.Blocks(title="Speech Emotion Recognition") as demo:
     gr.Markdown("# Speech Emotion Recognition\nPress and start speaking for 4s.")
-    btn = gr.Button("🎤 Record for 4 seconds")
+    btn = gr.Button("Record for 4 seconds")
     label = gr.Label(num_top_classes=7, label="Emotion")
     status = gr.Textbox(label="Status")
     btn.click(record_and_classify, outputs=[label, status])
