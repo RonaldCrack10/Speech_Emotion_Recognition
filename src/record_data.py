@@ -14,8 +14,8 @@ REPS = 3                   # Wiederholungen pro Emotion und Satz
 SENTENCES = [
     "Kids are talking by the door",
     "Dogs are sitting by the door",
-    "Das Auto steht vor dem Haus",
-    "Ich habe gerade die Nachricht bekommen",
+    "The car is in front of the house",
+    "I have just receive the message",
 ]
 
 
