@@ -20,3 +20,7 @@ ser/
 ├── checkpoints/       # gitignored
 ├── results/           # Plots + Metriken (committen, fürs Poster)
 └── data/              # gitignored
+
+
+## Next step:
+augment the dataset by recording additional data by yourself and other persons for dataset variation and retrain the model.
