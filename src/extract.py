@@ -42,7 +42,7 @@ def extract_split(encoder, df, name, batch_size=16):
     print(name, X.shape)
 
 if __name__ == "__main__":
-    encoder = WavLMModel.from_pretrained("microsoft/wavlm-large").to(device).eval()
+    encoder = WavLMModel.from_pretrained("microsoft/wavlm-base-plus").to(device).eval()
 
     df = build_metadata(ravdess_path, tess_path)
     train_df, val_df, test_df = split(df)
