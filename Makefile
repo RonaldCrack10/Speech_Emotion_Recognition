@@ -9,6 +9,9 @@ run:
 install:
 	$(PYTHON) -m pip install -r requirements.txt
 
+lint:
+	$(PYTHON) pylint
+
 # test:
 # 	$(PYTHON) -m pytest
 
