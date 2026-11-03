@@ -34,7 +34,7 @@ def load(name):
 
 
 class WeightedSER(nn.Module):
-    def __init__(self, n_layers=13, hidden=768, n_classes=7, dropout=0.3):
+    def __init__(self, n_layers=25, hidden=1024, n_classes=7, dropout=0.3):
         super().__init__()
         self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most
         self.head = nn.Sequential(
