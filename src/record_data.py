@@ -28,13 +28,13 @@ def run():
                 if path.exists():
                     continue
                 while True:
-                    input(f'\n[{emo.upper()}] "{sentence}"   Enter, dann sprechen ')
+                    input(f'\n[{emo.upper()}] "{sentence}"   Enter, then speak ')
                     y = record(4)
                     rms = float(np.sqrt((y ** 2).mean()))
                     if rms < 0.01:
-                        print(f"zu leise (Pegel {rms:.4f}), nochmal")
+                        print(f"Voice ton too low (Pegel {rms:.4f}), repeat")
                         continue
-                    if input("Behalten? Enter = ja, n = nochmal ").strip().lower() != "n":
+                    if input("Save? Enter = yes, n = no ").strip().lower() != "n":
                         break
                 sf.write(path, y, sample_rate)
                 print("gespeichert:", path.name)
