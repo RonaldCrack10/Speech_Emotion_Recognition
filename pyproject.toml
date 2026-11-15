@@ -1,0 +1,35 @@
+[project]
+name = "speech-emotion-recognition"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "RonaldCrack10", email = "rashidgaming6@gmail.com" }
+]
+requires-python = ">=3.13"
+dependencies = [
+    "gradio>=6.30.0",
+    "kaggle>=2.2.5",
+    "librosa>=1.0.0",
+    "matplotlib>=3.11.2",
+    "numpy>=2.3.5",
+    "opensmile>=2.6.0",
+    "pandas>=3.0.3",
+    "pyyaml>=6.0.3",
+    "requirements-py>=1.0.1",
+    "scikit-learn>=1.8.0",
+    "seaborn>=0.13.2",
+    "sounddevice>=0.5.6",
+    "soundfile>=0.14.0",
+    "torch>=2.14.1",
+    "torchaudio>=2.11.1",
+    "tqdm>=4.67.3",
+    "transformers>=5.19.0",
+]
+
+[project.scripts]
+speech-emotion-recognition = "speech_emotion_recognition:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
