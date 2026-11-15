@@ -18,8 +18,8 @@ import torch
 from torch.utils.data import DataLoader
 import random
 
-ravdess_path = r"C:\\Users\\rashi\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\Ravedess dataset"
-tess_path = r"C:\\Users\\rashi\\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\TESS Toronto emotional speech set data"
+ravdess_path = r"C:\\Users\\Ronald\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\Ravedess dataset"
+tess_path = r"C:\\Users\\Ronald\\Desktop\\Studium\\Fünftes Semester\\Advances In AI\\Datasets\\TESS Toronto emotional speech set data"
 
 sample_rate = 16_000 # wavlm hat eine sample rate von 16kHz
 max_len = 4 * sample_rate ## Bsp: 4 Sekunden × 16.000 Samples/Sekunde = 64.000 Samples
