@@ -8,7 +8,10 @@ predictor = Prediction()
 
 
 
-def analyze(y):                       
+def analyze(y):
+    ''''
+    Analyse the voice intensity from the recording. if its less than 0,05 pegel, the recording will be started over.
+    '''               
     rms = float(np.sqrt((y ** 2).mean()))
     if rms < 0.005:
         return None, f"Your voice is to low (Pegel {rms:.4f}), Please come closer to the microphone"
