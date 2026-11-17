@@ -2,6 +2,9 @@
 
 **Speak into your microphone and see which emotion the model hears in your voice.**
 
+![Uploading image.png…]()
+
+
 ![Demo screenshot](docs/demo.png)
 
 ## What is this?
