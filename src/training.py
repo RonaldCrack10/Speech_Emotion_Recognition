@@ -65,7 +65,7 @@ class WeightedSER(nn.Module):
     def __init__(self, n_layers=25, hidden=1024, n_classes=7, dropout=0.3):
         super().__init__()
         # one learnable number per layer; starts at 0, so all layers begin with equal weight
-        self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most
+        self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most # --> array of size n_layers with 0s
         self.head = nn.Sequential(
             nn.Linear(hidden, 256),             # 1024 numbers -> 256
             nn.ReLU(),                          # non-linearity
