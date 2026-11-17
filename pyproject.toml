@@ -15,6 +15,7 @@ dependencies = [
     "numpy>=2.3.5",
     "opensmile>=2.6.0",
     "pandas>=3.0.3",
+    "pathlib>=1.0.1",
     "pyyaml>=6.0.3",
     "requirements-py>=1.0.1",
     "scikit-learn>=1.8.0",

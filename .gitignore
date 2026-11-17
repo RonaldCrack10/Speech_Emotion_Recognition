@@ -225,3 +225,6 @@ data/raw/
 data/processed/
 __pycache__/
 .venv/
+
+# Raw Audio Data
+src/RawData
