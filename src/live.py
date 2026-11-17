@@ -38,10 +38,10 @@ def show(audio):
 
 class Prediction:
     def __init__(self):
-        self.encoder = WavLMModel.from_pretrained("microsoft/wavlm-base-plus").to(device).eval()
+        self.encoder = WavLMModel.from_pretrained("microsoft/wavlm-large").to(device).eval()
         ckpt = torch.load(CKPT, map_location= device, weights_only= False
                           )
-        self.mean = torch.from_numpy(ckpt["mean"]).to(device)     # (1, 13, 768)
+        self.mean = torch.from_numpy(ckpt["mean"]).to(device)     # (1, 24, 768)
         self.std = torch.from_numpy(ckpt["std"]).to(device)
         self.head = Head().to(device)
         self.head.load_state_dict(ckpt["model"])
@@ -51,7 +51,7 @@ class Prediction:
     @torch.no_grad()
     def predict(self, y):
         x = torch.from_numpy(preprocess(y)).float()[None].to(device)   # (1, 64000)
-        e = extract_batch(self.encoder, x)                             # (1, 13, 768)
+        e = extract_batch(self.encoder, x)                             # (1, 24, 1024)
         e = (e - self.mean) / self.std
         p = torch.softmax(self.head(e), dim=1)[0].cpu().numpy()
         return dict(zip(self.labels, p))
