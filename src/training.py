@@ -1,139 +1,172 @@
-"""
-train.py: train the classification head on pre-computed WavLM embeddings.
+"""Train and load the learned-layer-weighting classifier head (WeightedSER)."""
 
-What this file does, in short:
-    1. Loads the embeddings that extract.py saved to disk (one array of shape
-       (25 layers, 1024 values) per audio clip) together with their emotion labels.
-    2. Standardizes them with the mean and std of the training set.
-    3. Trains a small model (WeightedSER) on top of them. It first learns one weight
-       per encoder layer and mixes the 25 layers into a single vector, then a small
-       neural network turns that vector into 7 emotion scores.
-    4. After every epoch it measures the macro F1 score on the validation set and
-       saves the best model as a checkpoint (weights, labels, mean, std).
-    5. Stops early when the validation F1 has not improved for 10 epochs and prints
-       the learned layer weights, which show which layers carry the most emotion
-       information.
+from __future__ import annotations
 
-Why it is fast: the expensive encoder (WavLM) is not part of the training. It already
-ran once in extract.py, so each epoch only processes small vectors and takes seconds.
-
-Input:  data/processed/emb_*.npz
-Output: checkpoints/ser.pt (used later by live.py and the evaluation script)
-"""
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
+from sklearn.metrics import f1_score
 from torch.utils.data import DataLoader, TensorDataset
+from tqdm import tqdm
 
 from data import class_weights, labels
-from tqdm import tqdm
-from sklearn.metrics import f1_score
 
-ROOT = Path(__file__).resolve().parents[1]      # repo root, independent of the working directory
-EMB = ROOT / "data" / "processed"               # folder with the saved embeddings
-CKPT = ROOT / "checkpoints" / "ser.pt"          # where the best model is saved
-device = "cuda" if torch.cuda.is_available() else "cpu"   # use the GPU if available
+ROOT = Path(__file__).resolve().parents[1]
+EMB = ROOT / "data" / "processed"
+CKPT = ROOT / "checkpoints" / "ser.pt"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-@torch.no_grad()   # no gradients needed for evaluation, saves memory and time
-def evaluate(model, loader, criterion):
-    """Return (average loss, macro F1) of the model on the data in `loader`."""
-    model.eval()                                # turn dropout off
+@torch.no_grad()
+def evaluate(model: nn.Module, loader: DataLoader, criterion: nn.Module) -> tuple[float, float]:
+    """Return (average loss, macro F1) of the model on `loader`."""
+    model.eval()
     total_loss, preds, targets = 0.0, [], []
-    for x, y in tqdm(loader, desc= "train", leave= False):   # progress bar (label says "train", it is evaluation)
-        x, y = x.to(device), y.to(device)       # move the batch to the GPU/CPU
-        logits = model(x)                       # raw scores, shape (B, 7)
-        total_loss += criterion(logits, y).item() * len(y)   # loss times batch size -> correct average at the end
-        preds += logits.argmax(dim=1).tolist()  # predicted class = highest score
-        targets += y.tolist()                   # true classes
-    f1 = f1_score(targets, preds, average="macro")   # F1 per class, averaged with equal weight
-    return total_loss / len(targets), f1
+    for x, y in loader:
+        x, y = x.to(device), y.to(device)
+        logits = model(x)
+        total_loss += criterion(logits, y).item() * len(y)
+        preds.extend(logits.argmax(dim=1).tolist())
+        targets.extend(y.tolist())
+    f1 = f1_score(targets, preds, average="macro")
+    return total_loss / max(len(targets), 1), float(f1)
 
 
-def load(name):
-    """Load the embeddings and labels of one split ("train", "val" or "test")."""
-    # NOTE: extract.py saves emb_large_{name}.npz, but this reads emb_{name}.npz
+def load(name: str) -> tuple[np.ndarray, np.ndarray]:
+    """Load precomputed embeddings and labels for split ('train', 'val', or 'test')."""
     d = np.load(EMB / f"emb_{name}.npz")
-    return d["X"].astype(np.float32), d["y"]    # X: (N, layers, width) as float32, y: (N,) labels
+    return d["X"].astype(np.float32), d["y"]
+
+
+def load_split_full(name: str) -> dict[str, np.ndarray]:
+    """Load embeddings, labels, speakers, and corpus tags for one split."""
+    d = np.load(EMB / f"emb_{name}.npz")
+    return {
+        "X": d["X"].astype(np.float32),
+        "y": d["y"].astype(np.int64),
+        "speaker": d["speaker"],
+        "corpus": d["corpus"],
+    }
 
 
 class WeightedSER(nn.Module):
-    """Mixes all encoder layers with learned weights, then classifies the result."""
-    def __init__(self, n_layers=25, hidden=1024, n_classes=7, dropout=0.3):
+    """Learns softmax weights over all WavLM layers, then classifies with a 2-layer MLP."""
+
+    def __init__(self, n_layers: int = 25, hidden: int = 1024, n_classes: int = 7, dropout: float = 0.3):
         super().__init__()
-        # one learnable number per layer; starts at 0, so all layers begin with equal weight
-        self.layer_w = nn.Parameter(torch.zeros(n_layers)) # Layer weight...which layer influences most # --> array of size n_layers with 0s
+        self.layer_w = nn.Parameter(torch.zeros(n_layers))
         self.head = nn.Sequential(
-            nn.Linear(hidden, 256),             # 1024 numbers -> 256
-            nn.ReLU(),                          # non-linearity
-            nn.Dropout(dropout),                # randomly switches off 30% of values while training (against overfitting)
-            nn.Linear(256, n_classes)           # 256 -> 7 emotion scores
-            )
+            nn.Linear(hidden, 256),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(256, n_classes),
+        )
 
-    def forward(self, x):                              # x: (B, 25, 1024) for large
-        w = torch.softmax(self.layer_w, dim=0)         # turn the weights into positive numbers that sum to 1
-        pooled = (x * w[None, :, None]).sum(dim=1)     # weighted sum over the layers: (B, 1024), i.e. x1*w1 + x2*w2 + ...
-        return self.head(pooled)                       # (B, 7) scores
+    def layer_weights(self) -> torch.Tensor:
+        """Return normalized layer importance weights summing to 1."""
+        return torch.softmax(self.layer_w, dim=0)
 
-    
-    X_train, y_train = load("train")
-    X_val, y_val = load("val")
-
-    mean = X_train.mean(axis=0, keepdims=True)                 # mean per layer and value: (1, layers, width)
-    std = X_train.std(axis=0, keepdims=True) + 1e-6            # std per layer and value (+ tiny number against division by 0)
-    X_train, X_val = (X_train - mean) / std, (X_val - mean) / std   # standardize; val uses the TRAIN statistics
-
-def loader(X, y, shuffle):
-    """Wrap arrays in a DataLoader that delivers batches of 64."""
-    ds = TensorDataset(torch.from_numpy(X), torch.from_numpy(y).long())   # pair every embedding with its label
-    return DataLoader(ds, batch_size=64, shuffle=shuffle)   # shuffle only for training
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        w = self.layer_weights()
+        pooled = (x * w[None, :, None]).sum(dim=1)
+        return self.head(pooled)
 
 
-if __name__ == "__main__":    # runs only when this file is started directly
+def load_checkpoint(
+    ckpt_path: str | Path = CKPT,
+    map_location: str = "cpu",
+) -> tuple[WeightedSER, dict]:
+    """Load a saved WeightedSER checkpoint without requiring dataset files on disk."""
+    ckpt = torch.load(ckpt_path, map_location=map_location, weights_only=False)
+    n_layers, hidden = ckpt["mean"].shape[1], ckpt["mean"].shape[2]
+    ckpt_labels = ckpt.get("labels", labels)
+    model = WeightedSER(n_layers=n_layers, hidden=hidden, n_classes=len(ckpt_labels))
+    model.load_state_dict(ckpt["model"])
+    model.to(map_location).eval()
+    return model, ckpt
 
-    X_train, y_train = load("train")
-    X_val, y_val = load("val")
 
-    mean = X_train.mean(axis=0, keepdims=True)                 # statistics from the training set only
+def make_loader(X: np.ndarray, y: np.ndarray, shuffle: bool, batch_size: int = 64) -> DataLoader:
+    """Wrap arrays in a DataLoader."""
+    ds = TensorDataset(torch.from_numpy(X), torch.from_numpy(y).long())
+    return DataLoader(ds, batch_size=batch_size, shuffle=shuffle)
+
+
+def train_weighted_ser(
+    X_train: np.ndarray,
+    y_train: np.ndarray,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    epochs: int = 60,
+    patience: int = 10,
+    lr: float = 1e-3,
+    weight_decay: float = 1e-2,
+    seed: int = 42,
+    save_path: Path | None = CKPT,
+) -> tuple[WeightedSER, np.ndarray, np.ndarray, float]:
+    """Train WeightedSER with standardization fitted strictly on X_train."""
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+
+    mean = X_train.mean(axis=0, keepdims=True)
     std = X_train.std(axis=0, keepdims=True) + 1e-6
-    X_train, X_val = (X_train - mean) / std, (X_val - mean) / std   # standardize train and val
+    X_train_n = (X_train - mean) / std
+    X_val_n = (X_val - mean) / std
 
-    train_loader, val_loader = loader(X_train, y_train, True), loader(X_val, y_val, False)
+    train_loader = make_loader(X_train_n, y_train, shuffle=True)
+    val_loader = make_loader(X_val_n, y_val, shuffle=False)
 
-    model = WeightedSER().to(device)
-    # class weights: rarer classes count more in the loss, so every class matters equally
+    n_layers, hidden = X_train.shape[1], X_train.shape[2]
+    model = WeightedSER(n_layers=n_layers, hidden=hidden, n_classes=len(labels)).to(device)
     criterion = nn.CrossEntropyLoss(
-        weight=class_weights(pd.DataFrame({"label": y_train})).to(device))
-    # AdamW updates the weights; weight_decay keeps them small (against overfitting)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
+        weight=class_weights(pd.DataFrame({"label": y_train})).to(device)
+    )
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=weight_decay)
 
-    best_f1, wait = 0.0, 0    # best validation F1 so far, epochs without improvement
-    for epoch in range(1, 61):
-        model.train()                           # dropout on
-        for x, y in tqdm(train_loader):
+    best_f1, wait, best_state = 0.0, 0, None
+    for epoch in range(1, epochs + 1):
+        model.train()
+        for x, y in tqdm(train_loader, desc=f"Epoch {epoch:02d}", leave=False):
             x, y = x.to(device), y.to(device)
-            optimizer.zero_grad()               # 1. clear old gradients
-            criterion(model(x), y).backward()   # 2. compute the loss and the gradients
-            optimizer.step()                    # 3. adjust the weights
+            optimizer.zero_grad()
+            criterion(model(x), y).backward()
+            optimizer.step()
 
-        val_loss, val_f1 = evaluate(model, val_loader, criterion)   # measure on unseen speakers
-        print(f"Epoche {epoch:2d} | val loss {val_loss:.3f} | val F1 {val_f1:.3f}")
+        val_loss, val_f1 = evaluate(model, val_loader, criterion)
+        print(f"Epoch {epoch:2d} | val loss {val_loss:.3f} | val F1 {val_f1:.3f}")
 
-        if val_f1 > best_f1:                    # new best model: save it
+        if val_f1 > best_f1:
             best_f1, wait = val_f1, 0
-            CKPT.parent.mkdir(exist_ok=True)
-            # mean and std are saved too, because live.py needs the same standardization
-            torch.save({"model": model.state_dict(), "labels": labels,
-                        "mean": mean, "std": std, "val_f1": val_f1}, CKPT)
+            best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
+            if save_path is not None:
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+                torch.save(
+                    {
+                        "model": best_state,
+                        "labels": labels,
+                        "mean": mean,
+                        "std": std,
+                        "val_f1": val_f1,
+                    },
+                    save_path,
+                )
         else:
-            wait += 1                           # no improvement
-            if wait >= 10:                      # early stopping after 10 epochs without improvement
+            wait += 1
+            if wait >= patience:
                 print("Early Stopping")
                 break
 
-    print("beste Val-F1:", round(best_f1, 3))
-    # learned layer weights (sum = 1): show which layers carry the most emotion information
-    print("Schichtgewichte:", torch.softmax(model.layer_w, 0).detach().cpu().numpy().round(2))
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    return model, mean, std, best_f1
+
+
+if __name__ == "__main__":
+    X_train, y_train = load("train")
+    X_val, y_val = load("val")
+    model, _, _, best_f1 = train_weighted_ser(X_train, y_train, X_val, y_val, save_path=CKPT)
+    print("Best Val-F1:", round(best_f1, 3))
+    print("Layer weights:", model.layer_weights().detach().cpu().numpy().round(3))
