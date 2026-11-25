@@ -1,0 +1,38 @@
+{
+  "eGeMAPS + LogReg": {
+    "accuracy_mean": 0.5192307692307693,
+    "accuracy_std": 0.0,
+    "macro_f1_mean": 0.4979124184538458,
+    "macro_f1_std": 0.0
+  },
+  "eGeMAPS + RBF SVM": {
+    "accuracy_mean": 0.5038461538461538,
+    "accuracy_std": 0.0,
+    "macro_f1_mean": 0.48762117645045916,
+    "macro_f1_std": 0.0
+  },
+  "WavLM-Large (Last Layer)": {
+    "accuracy_mean": 0.7166666666666667,
+    "accuracy_std": 0.011028622137234097,
+    "macro_f1_mean": 0.7254540051142545,
+    "macro_f1_std": 0.012570555881067971
+  },
+  "WavLM-Large (Uniform Avg)": {
+    "accuracy_mean": 0.7564102564102564,
+    "accuracy_std": 0.014840816542038749,
+    "macro_f1_mean": 0.7582694650686003,
+    "macro_f1_std": 0.012764358131061748
+  },
+  "WavLM-Large (WeightedSER)": {
+    "accuracy_mean": 0.7782051282051281,
+    "accuracy_std": 0.01102862213723414,
+    "macro_f1_mean": 0.7828337440476573,
+    "macro_f1_std": 0.013248467174566177
+  },
+  "WavLM WeightedSER + eGeMAPS": {
+    "accuracy_mean": 0.7692307692307692,
+    "accuracy_std": 0.0054392829322042445,
+    "macro_f1_mean": 0.7748986092250788,
+    "macro_f1_std": 0.007995506523629214
+  }
+}
