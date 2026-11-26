@@ -19,9 +19,9 @@ from live import Prediction, compute_rms, record
 COLOR = {
     "angry": "#ef4444",
     "disgust": "#84cc16",
-    "fear": "#a855f7",
+    "fear": "#2dd4bf",
     "happy": "#facc15",
-    "neutral": "#94a3b8",
+    "neutral": "#c9bd9f",
     "sad": "#3b82f6",
     "surprise": "#f97316",
 }
@@ -317,67 +317,113 @@ def run_sample_clip(sample_path: str, ground_truth: str, history, threshold):
 
 
 CSS = """
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,300..800&family=Instrument+Sans:wght@400;500;600&display=swap');
+
 .gradio-container {
-  background: radial-gradient(1100px 600px at 8% -10%, #312e81 0%, transparent 60%),
-              radial-gradient(900px 500px at 100% 0%, #831843 0%, transparent 55%), #0b0b14 !important;
+  --forest-950:#0a1c13; --forest-900:#0f2a1c; --forest-700:#1a4a31; --forest-600:#1f5a3a;
+  --beige:#efe6d2; --beige-dim:#b9ae94; --volt:#b44cff;
+  --font:'Instrument Sans', system-ui, sans-serif;
+  --body-background-fill:var(--forest-950);
+  --background-fill-primary:var(--forest-900);
+  --background-fill-secondary:var(--forest-900);
+  --block-background-fill:var(--forest-900);
+  --block-border-color:rgba(239,230,210,.14);
+  --border-color-primary:rgba(239,230,210,.14);
+  --block-label-background-fill:var(--forest-950);
+  --block-label-text-color:var(--beige-dim);
+  --body-text-color:var(--beige);
+  --body-text-color-subdued:var(--beige-dim);
+  --input-background-fill:var(--forest-950);
+  --button-secondary-background-fill:transparent;
+  --button-secondary-background-fill-hover:rgba(239,230,210,.08);
+  --button-secondary-text-color:var(--beige);
+  --button-secondary-border-color:rgba(239,230,210,.3);
+  --color-accent:var(--volt);
+  --slider-color:var(--volt);
+  font-family:var(--font) !important;
+  background:radial-gradient(900px 520px at 0% -10%, rgba(31,90,58,.9), transparent 65%), var(--forest-950) !important;
 }
-footer {display: none !important;}
-.hero {text-align: center; padding: 24px 10px 6px;}
-.hero h1 {font-size: 2.5rem; font-weight: 800; margin: 0; color: transparent;
-  background: linear-gradient(90deg, #818cf8, #f472b6, #fbbf24); -webkit-background-clip: text; background-clip: text;}
-.hero p {color: #a1a1b5; margin: 8px 0 0; font-size: 1.02rem;}
-.card {background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.10);
-  border-radius: 20px; padding: 20px; color: #e5e7f0; backdrop-filter: blur(8px);}
-.result {text-align: center;}
-.orb {width: 140px; height: 140px; margin: 6px auto 12px; border-radius: 50%;
-  border: 5px solid var(--c); display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 0 50px -6px var(--c), inset 0 0 30px -10px var(--c);
-  background: radial-gradient(circle, rgba(255,255,255,.07), transparent 70%);}
-.orb span {font-size: 2.2rem; font-weight: 800; color: #fff;}
-.title {font-size: 1.9rem; font-weight: 800; margin-top: 4px;}
-.sub {color: #9a9ab0; margin-bottom: 10px;}
-.gt-badge {display: inline-block; padding: 4px 12px; border-radius: 99px; font-size: .85rem; margin-bottom: 10px;}
-.gt-ok {background: rgba(34,197,94,.16); color: #86efac; border: 1px solid rgba(34,197,94,.4);}
-.gt-miss {background: rgba(245,158,11,.16); color: #fcd34d; border: 1px solid rgba(245,158,11,.4);}
-.bars {margin-top: 12px; text-align: left;}
-.row {display: grid; grid-template-columns: 110px 1fr 48px; align-items: center; gap: 10px; margin: 7px 0;}
-.nm {color: #cfd0e0; font-size: .92rem; display: flex; align-items: center; gap: 8px;}
-.sw {display: inline-block; width: 10px; height: 10px; border-radius: 50%;}
-.pc {color: #9a9ab0; text-align: right; font-variant-numeric: tabular-nums;}
-.track {height: 11px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden;}
-.fill {height: 100%; border-radius: 99px; transition: width .6s ease;}
-.rec-btn {background: linear-gradient(90deg, #6366f1, #ec4899) !important; color: #fff !important; border: none !important;
-  font-size: 1.05rem !important; font-weight: 700 !important; padding: 14px !important; border-radius: 14px !important;
-  box-shadow: 0 8px 30px rgba(236,72,153,.3);}
-.pill {display: inline-flex; align-items: center; gap: 10px; padding: 9px 15px; border-radius: 99px;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); color: #d6d7e6; margin-top: 10px;}
-.dot {width: 10px; height: 10px; border-radius: 50%; background: #64748b;}
-.pill.ok .dot {background: #22c55e;}
-.pill.warn .dot {background: #f59e0b;}
-.pill.rec .dot {background: #ef4444; animation: pulse 1s infinite;}
-@keyframes pulse {0% {box-shadow: 0 0 0 0 rgba(239,68,68,.7);} 100% {box-shadow: 0 0 0 14px rgba(239,68,68,0);}}
-.hist {margin-top: 12px;}
-.hlabel {color: #9a9ab0; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 8px;}
-.chip {display: inline-flex; align-items: center; gap: 8px; margin: 4px 6px 4px 0; padding: 5px 11px; border-radius: 99px;
-  border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04); color: #e5e7f0; font-size: .88rem;}
-.how {color: #b8b9cc; line-height: 1.55;}
-.how b {color: #fff;}
-.foot {text-align: center; color: #6b6b85; font-size: .85rem; padding: 14px 0 6px;}
+footer {display:none !important;}
+
+/* Hero */
+.hero {text-align:left; padding:36px 6px 18px; max-width:760px;}
+.hero h1 {font-family:'Bricolage Grotesque',sans-serif; font-variation-settings:'wdth' 80;
+  font-size:clamp(2.6rem,6vw,4.4rem); font-weight:800; line-height:.95; letter-spacing:-.025em;
+  margin:0; color:var(--beige);}
+.hero p {color:var(--beige-dim); margin:16px 0 0; font-size:1.05rem; line-height:1.55; max-width:52ch;}
+
+/* Karten */
+.card {background:rgba(239,230,210,.05); border:1px solid rgba(239,230,210,.14);
+  border-radius:16px; padding:20px; color:var(--beige);}
+.result {text-align:center; border-radius:28px; padding:28px 24px; background:var(--forest-700);
+  border-color:rgba(239,230,210,.22);}
+.orb {width:150px; height:150px; margin:4px auto 14px; border-radius:50%; border:4px solid var(--c);
+  display:flex; align-items:center; justify-content:center; background:var(--forest-950);
+  box-shadow:0 0 0 10px rgba(239,230,210,.04), 0 0 56px -10px var(--c);}
+.orb span {font-family:'Bricolage Grotesque',sans-serif; font-size:2.4rem; font-weight:800; color:var(--beige);}
+.title {font-family:'Bricolage Grotesque',sans-serif; font-size:2.1rem; font-weight:800;
+  letter-spacing:-.02em; margin-top:4px;}
+.sub {color:var(--beige-dim); margin-bottom:12px;}
+.gt-badge {display:inline-block; padding:4px 12px; border-radius:99px; font-size:.85rem; margin-bottom:10px;}
+.gt-ok {background:rgba(34,197,94,.16); color:#86efac; border:1px solid rgba(34,197,94,.4);}
+.gt-miss {background:rgba(245,158,11,.16); color:#fcd34d; border:1px solid rgba(245,158,11,.4);}
+
+/* Balken */
+.bars {margin-top:14px; text-align:left;}
+.row {display:grid; grid-template-columns:110px 1fr 48px; align-items:center; gap:10px; margin:8px 0;}
+.nm {color:var(--beige); font-size:.92rem; display:flex; align-items:center; gap:8px;}
+.sw {display:inline-block; width:10px; height:10px; border-radius:50%;}
+.pc {color:var(--beige-dim); text-align:right; font-variant-numeric:tabular-nums;}
+.track {height:10px; background:rgba(239,230,210,.10); border-radius:99px; overflow:hidden;}
+.fill {height:100%; border-radius:99px; transition:width .6s ease;}
+
+/* Aufnahme-Button: das einzige große Lila */
+.rec-btn {background:var(--volt) !important; color:var(--forest-950) !important; border:none !important;
+  font-size:1.05rem !important; font-weight:700 !important; padding:16px !important;
+  border-radius:999px !important; box-shadow:0 10px 36px -8px rgba(180,76,255,.65);}
+.rec-btn:hover {filter:brightness(1.08);}
+
+/* Status, Historie */
+.pill {display:inline-flex; align-items:center; gap:10px; padding:9px 15px; border-radius:99px;
+  background:rgba(239,230,210,.07); border:1px solid rgba(239,230,210,.16); color:var(--beige); margin-top:10px;}
+.dot {width:10px; height:10px; border-radius:50%; background:var(--beige-dim);}
+.pill.ok .dot {background:#4ade80;}
+.pill.warn .dot {background:#f59e0b;}
+.pill.rec .dot {background:var(--volt); animation:pulse 1s infinite;}
+@keyframes pulse {0% {box-shadow:0 0 0 0 rgba(180,76,255,.7);} 100% {box-shadow:0 0 0 14px rgba(180,76,255,0);}}
+.hist {margin-top:12px;}
+.hlabel {color:var(--beige-dim); font-size:.9rem; font-weight:600; margin-bottom:8px;}
+.chip {display:inline-flex; align-items:center; gap:8px; margin:4px 6px 4px 0; padding:5px 11px; border-radius:99px;
+  border:1px solid rgba(239,230,210,.18); background:rgba(239,230,210,.05); color:var(--beige); font-size:.88rem;}
+
+/* Text */
+.how {line-height:1.5;}
+.how p {margin:10px 0 0; color:var(--beige-dim);}
+.how b {color:var(--beige);}
+.foot {text-align:center; color:var(--beige-dim); font-size:.85rem; padding:18px 0 6px;}
+
+/* Tabs und Fokus */
+button[role="tab"] {color:var(--beige-dim) !important; font-weight:600;}
+button[role="tab"][aria-selected="true"] {color:var(--beige) !important; border-bottom-color:var(--volt) !important;}
+.gradio-container :focus-visible {outline:2px solid var(--volt); outline-offset:2px;}
+
+@media (max-width:640px) {.row {grid-template-columns:90px 1fr 44px;} .orb {width:120px; height:120px;}}
+@media (prefers-reduced-motion:reduce) {.pill.rec .dot {animation:none;} .fill {transition:none;}}
 """
 
 HERO = (
-    '<div class="hero"><h1>Speech Emotion Recognition</h1>'
-    "<p>WavLM-Large with Learned Layer Weighting &middot; Real-Time Acoustic Emotion Explorer</p></div>"
+    '<div class="hero"><h1>Speech Emotion<br>Recognition</h1>'
+    "<p>Record your voice, upload a clip, or try a sample from speakers the model has never heard.</p></div>"
 )
 HOWTO = (
-    '<div class="card how"><b>Try it 3 ways</b><br>'
-    "1. Click <b>Record 4s</b> on the demo laptop<br>"
-    "2. Record in your browser or upload any <code>.wav/.mp3</code> clip<br>"
-    "3. Click an <b>unseen test-actor sample</b> below to verify live inference</div>"
+    '<div class="card how"><b>Three ways to start</b>'
+    "<p><b>Record</b> 4 seconds with the laptop microphone.</p>"
+    "<p><b>Upload</b> a WAV or MP3, or record in the browser.</p>"
+    "<p><b>Test</b> a preset from unseen actors and compare it with the true label.</p></div>"
 )
 FOOT = (
-    '<div class="foot">WavLM-Large (frozen) &middot; Learned Layer Weighting (SUPERB-style) &middot; '
-    "Speaker-Independent RAVDESS &amp; TESS</div>"
+    '<div class="foot">WavLM-Large (frozen) with learned layer weighting. '
+    "Trained on RAVDESS and TESS, tested on unseen speakers.</div>"
 )
 
 
