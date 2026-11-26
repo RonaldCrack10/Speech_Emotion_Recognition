@@ -12,7 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-
+import math
 from data import build_metadata, labels, ravdess_path, sample_rate, split, to_mono_float32
 from live import Prediction, compute_rms, record
 
@@ -341,19 +341,24 @@ CSS = """
   --color-accent:var(--volt);
   --slider-color:var(--volt);
   font-family:var(--font) !important;
-  background:radial-gradient(900px 520px at 0% -10%, rgba(31,90,58,.9), transparent 65%), var(--forest-950) !important;
+  background:transparent !important; position:relative; z-index:1;
 }
 footer {display:none !important;}
 
 /* Hero */
-.hero {text-align:left; padding:36px 6px 18px; max-width:760px;}
-.hero h1 {font-family:'Bricolage Grotesque',sans-serif; font-variation-settings:'wdth' 80;
-  font-size:clamp(2.6rem,6vw,4.4rem); font-weight:800; line-height:.95; letter-spacing:-.025em;
-  margin:0; color:var(--beige);}
-.hero p {color:var(--beige-dim); margin:16px 0 0; font-size:1.05rem; line-height:1.55; max-width:52ch;}
+.hero {text-align:center; padding:44px 8px 26px; margin:0 auto; max-width:820px;}
+.hero h1 {font-family:'Bricolage Grotesque',sans-serif; font-variation-settings:'wdth' 78;
+  font-size:clamp(2.3rem,5vw,3.7rem); font-weight:800; line-height:1; letter-spacing:-.03em;
+  margin:0; text-wrap:balance; color:transparent;
+  background:linear-gradient(180deg,#f8f1e1 20%,#cdbd96 100%);
+  -webkit-background-clip:text; background-clip:text;}
+.eq {display:flex; align-items:center; justify-content:center; gap:4px; height:30px; margin:22px 0 18px;}
+.eq i {display:block; width:3px; border-radius:2px; background:var(--volt);}
+.eq i:nth-child(-n+6), .eq i:nth-last-child(-n+6) {background:rgba(239,230,210,.35);}
+.hero p {color:var(--beige-dim); margin:0 auto; font-size:1.05rem; line-height:1.55; max-width:46ch;}
 
 /* Karten */
-.card {background:rgba(239,230,210,.05); border:1px solid rgba(239,230,210,.14);
+.card {background:rgba(239,230,210,.05); border:1px solid rgba(239,230,210,.14); backdrop-filter:blur(10px);
   border-radius:16px; padding:20px; color:var(--beige);}
 .result {text-align:center; border-radius:28px; padding:28px 24px; background:var(--forest-700);
   border-color:rgba(239,230,210,.22);}
@@ -409,10 +414,51 @@ button[role="tab"][aria-selected="true"] {color:var(--beige) !important; border-
 
 @media (max-width:640px) {.row {grid-template-columns:90px 1fr 44px;} .orb {width:120px; height:120px;}}
 @media (prefers-reduced-motion:reduce) {.pill.rec .dot {animation:none;} .fill {transition:none;}}
+
+/* Animierter Hintergrund */
+body, gradio-app {background:#0a1c13 !important;}
+div:has(> .bg) {padding:0 !important; margin:0 !important; min-height:0 !important;
+  border:0 !important; background:transparent !important;}
+.bg {position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none;
+  animation:bgin 2.2s ease both;}
+@keyframes bgin {from {opacity:0;} to {opacity:1;}}
+.bg::after {content:""; position:absolute; inset:0;
+  background:radial-gradient(ellipse at 50% 40%, transparent 40%, rgba(5,14,9,.75) 100%);}
+
+.glow {position:absolute; border-radius:50%; filter:blur(90px); will-change:transform;}
+.g1 {width:60vw; height:60vw; left:-15vw; top:-25vw; background:#1f5a3a; opacity:.75;
+  animation:drift1 38s ease-in-out infinite alternate;}
+.g2 {width:50vw; height:50vw; right:-15vw; top:20vh; background:#14402a; opacity:.9;
+  animation:drift2 46s ease-in-out infinite alternate;}
+.g3 {width:34vw; height:34vw; left:30vw; bottom:-20vw; background:#b44cff; opacity:.16;
+  animation:drift3 55s ease-in-out infinite alternate;}
+@keyframes drift1 {to {transform:translate(12vw,10vh) scale(1.12);}}
+@keyframes drift2 {to {transform:translate(-10vw,-8vh) scale(.9);}}
+@keyframes drift3 {to {transform:translate(-14vw,-6vh) scale(1.2);}}
+
+.wave {position:absolute; left:0; width:200%; height:220px;}
+.wave path {fill:none; stroke-width:1.5; vector-effect:non-scaling-stroke;}
+.w1 {top:20%; animation:flow 70s linear infinite;}
+.w1 path {stroke:rgba(239,230,210,.10);}
+.w2 {top:52%; animation:flow 95s linear infinite reverse;}
+.w2 path {stroke:rgba(239,230,210,.06);}
+.w3 {bottom:4%; animation:flow 55s linear infinite;}
+.w3 path {stroke:rgba(180,76,255,.30);}
+@keyframes flow {to {transform:translateX(-50%);}}
+
+.grain {position:absolute; inset:0; opacity:.07; mix-blend-mode:overlay;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.5'/></svg>");}
+
+@media (prefers-reduced-motion:reduce) {.glow, .wave, .bg {animation:none;}}
 """
 
+BARS = "".join(
+    f'<i style="height:{4 + 22 * math.exp(-((k - 12) / 5) ** 2) * (0.55 + 0.45 * abs(math.sin(k * 1.7))):.0f}px"></i>'
+    for k in range(25)
+)
 HERO = (
     '<div class="hero"><h1>Speech Emotion<br>Recognition</h1>'
+    f'<div class="eq" aria-hidden="true">{BARS}</div>'
     "<p>Record your voice, upload a clip, or try a sample from speakers the model has never heard.</p></div>"
 )
 HOWTO = (
@@ -425,6 +471,16 @@ FOOT = (
     '<div class="foot">WavLM-Large (frozen) with learned layer weighting. '
     "Trained on RAVDESS and TESS, tested on unseen speakers.</div>"
 )
+BG = (
+    '<div class="bg" aria-hidden="true">'
+    '<i class="glow g1"></i><i class="glow g2"></i><i class="glow g3"></i>'
+    + "".join(
+        f'<svg class="wave w{n}" viewBox="0 0 2880 200" preserveAspectRatio="none">'
+        f'<path d="M0 100 q90 {-amp} 180 0{" t180 0" * 15}"/></svg>'
+        for n, amp in ((1, 70), (2, 45), (3, 110))
+    )
+    + '<i class="grain"></i></div>'
+)
 
 
 def create_demo() -> gr.Blocks:
@@ -433,6 +489,7 @@ def create_demo() -> gr.Blocks:
 
     with gr.Blocks(title="Speech Emotion Recognition") as demo:
         gr.HTML(f"<style>{CSS}</style>")
+        gr.HTML(BG)
         gr.HTML(HERO)
         hist = gr.State([])
 
